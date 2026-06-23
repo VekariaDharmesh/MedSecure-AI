@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-green: #10b981;
+  --color-brand-amber: #f59e0b;
+  --color-brand-red: #ef4444;
+  --color-bg-dark: #070a13;
+  --color-panel-dark: #0f1423;
+  --color-panel-border: rgba(255, 255, 255, 0.07);
+}
+
+:root {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: var(--color-bg-dark);
+  color: #e2e8f0;
+  color-scheme: dark;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Glassmorphism Panel style */
+.glass-panel {
+  background: rgba(15, 20, 35, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(15, 20, 35, 0.8);
+  border-color: rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.03);
+}
+
+/* Scanning Sweep Laser Animation */
+@keyframes scan-sweep {
+  0% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+  100% {
+    top: 0%;
+  }
+}
+
+.scanner-laser {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #10b981, transparent);
+  box-shadow: 0 0 12px #10b981, 0 0 4px #10b981;
+  position: absolute;
+  left: 0;
+  right: 0;
+  animation: scan-sweep 3s infinite linear;
+}
+
+.scanner-laser-alert {
+  background: linear-gradient(90deg, transparent, #ef4444, transparent);
+  box-shadow: 0 0 12px #ef4444, 0 0 4px #ef4444;
+}
+
+/* Custom Pulsing Markers for Leaflet Maps */
+.pulse-marker-caution {
+  width: 14px;
+  height: 14px;
+  background: #f59e0b;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  animation: pulse-caution 1.8s infinite;
+}
+
+.pulse-marker-high {
+  width: 16px;
+  height: 16px;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8);
+  animation: pulse-high 1.5s infinite;
+}
+
+@keyframes pulse-caution {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.8);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+@keyframes pulse-high {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* Leaflet Container Overrides */
+.leaflet-container {
+  background: #070a13 !important;
+  font-family: inherit;
+}
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: #0f1423 !important;
+}
+.leaflet-bar a {
+  background-color: #0f1423 !important;
+  color: #e2e8f0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.leaflet-bar a:hover {
+  background-color: #1e293b !important;
+}
+.leaflet-popup-content-wrapper {
+  background: #0f1423 !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px !important;
+  backdrop-filter: blur(8px);
+}
+.leaflet-popup-tip {
+  background: #0f1423 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom UI Transitions and Animations */
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-glow-green {
+  animation: glow-green 2s infinite ease-in-out;
+}
+
+.animate-glow-red {
+  animation: glow-red 2s infinite ease-in-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-green {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.2), 0 0 15px rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4), 0 0 25px rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.5);
+  }
+}
+
+@keyframes glow-red {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.2), 0 0 15px rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4), 0 0 25px rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* Glass panel enhancements */
+.glass-card {
+  background: rgba(15, 20, 35, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.05);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* OCR Box Overlays on Image Preview */
+.ocr-overlay-box {
+  position: absolute;
+  border: 1.5px solid rgba(16, 185, 129, 0.45);
+  background-color: rgba(16, 185, 129, 0.08);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ocr-overlay-box:hover {
+  border-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 8px #10b981;
+  z-index: 10;
+}
+
+.ocr-overlay-box-warning {
+  border-color: rgba(245, 158, 11, 0.6);
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.ocr-overlay-box-warning:hover {
+  border-color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+.ocr-overlay-box-danger {
+  border-color: rgba(239, 68, 68, 0.65);
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+.ocr-overlay-box-danger:hover {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.25);
+  box-shadow: 0 0 8px #ef4444;
+}
+

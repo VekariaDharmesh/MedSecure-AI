@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build output
+frontend/dist/
+*.egg-info/
+
+# Database
+backend/medsecure.db
+
+# Uploads
+backend/uploads/*.jpg
+backend/uploads/*.jpeg
+backend/uploads/*.png
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# EasyOCR model cache
+~/.EasyOCR/
