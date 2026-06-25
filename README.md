@@ -1,5 +1,5 @@
 # MedSecure AI — Real-time Counterfeit Medicine Detector
-### CDSCO Verification Framework | Team Meridian
+### | Team Meridian
 
 MedSecure AI is a production-grade, real-time counterfeit medicine detection and verification platform. Designed in accordance with Central Drugs Standard Control Organisation (CDSCO) verification standards, this application allows inspectors, pharmacists, and consumers to scan medicine labels using a device camera to verify legitimacy, detect visual printing deviations, decode barcodes, and track report alerts.
 
