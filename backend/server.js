@@ -7,14 +7,17 @@ import fastifyWebsocket from '@fastify/websocket';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
+import 'dotenv/config';
 import { fileURLToPath } from 'url';
+import { z } from 'zod';
 import { query, initDb } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3001;
-const ML_SERVICE_URL = 'http://localhost:8000';
+const PORT = parseInt(process.env.PORT || '3001', 10);
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+const JWT_SECRET = process.env.JWT_SECRET || 'medsecure-dev-secret';
 
 const fastify = Fastify({ logger: true });
 
@@ -24,7 +27,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 await fastify.register(fastifyCors, { origin: '*' });
-await fastify.register(fastifyJwt, { secret: 'medsecure-super-secret-key-2026' });
+await fastify.register(fastifyJwt, { secret: JWT_SECRET });
 await fastify.register(fastifyMultipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 await fastify.register(fastifyWebsocket);
 await fastify.register(fastifyStatic, {
@@ -34,6 +37,36 @@ await fastify.register(fastifyStatic, {
 
 const wsClients = new Map();
 const generateId = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+
+// Zod validation schemas
+const registerSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['consumer', 'pharmacist', 'healthcare_worker', 'inspector']),
+  license_number: z.string().optional(),
+  pin_code: z.string().optional()
+});
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required')
+});
+
+const reportSchema = z.object({
+  medicine_id: z.string().min(1, 'medicine_id is required'),
+  batch_number: z.string().min(1, 'batch_number is required'),
+  lat: z.number().optional(),
+  lng: z.number().optional()
+});
+
+function validate(schema, data) {
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    const error = result.error.errors.map(e => e.message).join(', ');
+    return { valid: false, error };
+  }
+  return { valid: true, data: result.data };
+}
 
 async function authenticate(request, reply) {
   try {
@@ -87,8 +120,9 @@ fastify.register(async function (fastify) {
 // ──────────────────────────────────────── AUTH ────────────────────────────────────────
 
 fastify.post('/api/v1/auth/register', async (request, reply) => {
-  const { email, password, role, license_number, pin_code } = request.body || {};
-  if (!email || !password || !role) return reply.status(400).send({ error: 'email, password, and role are required' });
+  const parsed = validate(registerSchema, request.body);
+  if (!parsed.valid) return reply.status(400).send({ error: parsed.error });
+  const { email, password, role, license_number, pin_code } = parsed.data;
 
   const existing = await query.get('SELECT id FROM users WHERE email = ?', [email]);
   if (existing) return reply.status(409).send({ error: 'Email already registered' });
@@ -107,8 +141,9 @@ fastify.post('/api/v1/auth/register', async (request, reply) => {
 });
 
 fastify.post('/api/v1/auth/login', async (request, reply) => {
-  const { email, password } = request.body || {};
-  if (!email || !password) return reply.status(400).send({ error: 'Email and password required' });
+  const parsed = validate(loginSchema, request.body);
+  if (!parsed.valid) return reply.status(400).send({ error: parsed.error });
+  const { email, password } = parsed.data;
 
   const user = await query.get('SELECT * FROM users WHERE email = ?', [email]);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
@@ -188,16 +223,58 @@ fastify.post('/api/v1/scans', { preHandler: optionalAuth }, async (request, repl
   return { scanId, status: 'processing', image_url: relativeUrl };
 });
 
+function sendWs(scanId, msg) {
+  if (wsClients.has(scanId)) {
+    wsClients.get(scanId).forEach(s => { try { s.send(JSON.stringify(msg)); } catch (e) {} });
+  }
+}
+
 async function runMlPipeline(scanId, filePath, relativeUrl, lat, lng) {
   try {
-    const response = await fetch(`${ML_SERVICE_URL}/process_scan`, {
+    // 1. Start async ML pipeline
+    const startRes = await fetch(`${ML_SERVICE_URL}/process_scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scan_id: scanId, file_path: filePath })
     });
+    if (!startRes.ok) throw new Error(`ML pipeline failed to start, status ${startRes.status}`);
 
-    if (!response.ok) throw new Error(`ML responded ${response.status}`);
-    const result = await response.json();
+    // 2. Poll progress and send real-time stage updates via WebSocket
+    let lastStage = -1;
+    let result = null;
+    const maxPolls = 120; // 60 second timeout
+
+    for (let i = 0; i < maxPolls; i++) {
+      await new Promise(r => setTimeout(r, 500));
+
+      const progRes = await fetch(`${ML_SERVICE_URL}/scan_progress/${scanId}`);
+      if (!progRes.ok) continue;
+
+      const progress = await progRes.json();
+
+      if (progress.status === 'error') {
+        throw new Error(progress.error || 'ML pipeline error');
+      }
+
+      if (progress.stage_index !== undefined && progress.stage_index !== lastStage) {
+        lastStage = progress.stage_index;
+        sendWs(scanId, {
+          status: 'stage',
+          scanId,
+          stage: progress.stage,
+          stageIndex: progress.stage_index,
+          totalStages: progress.total_stages,
+          progress: progress.progress
+        });
+      }
+
+      if (progress.status === 'complete' && progress.result) {
+        result = progress.result;
+        break;
+      }
+    }
+
+    if (!result) throw new Error('ML pipeline timed out');
 
     const verdict = result.authenticity_score >= 80 ? 'verified'
       : result.authenticity_score >= 55 ? 'caution' : 'high_risk';
@@ -223,7 +300,7 @@ async function runMlPipeline(scanId, filePath, relativeUrl, lat, lng) {
       }
     }
 
-    const payload = JSON.stringify({
+    sendWs(scanId, {
       status: 'completed', scanId,
       data: { id: scanId, image_url: relativeUrl, authenticity_score: result.authenticity_score,
         verdict, ocr_extracted: result.ocr_extracted, anomalies: result.anomalies,
@@ -231,25 +308,20 @@ async function runMlPipeline(scanId, filePath, relativeUrl, lat, lng) {
         medicine_name: result.ocr_extracted?.name, lat, lng }
     });
 
-    if (wsClients.has(scanId)) {
-      wsClients.get(scanId).forEach(s => { try { s.send(payload); } catch (e) {} });
-    }
   } catch (err) {
     console.error(`ML pipeline error for ${scanId}:`, err.message);
     await query.run(
       `UPDATE scans SET verdict='caution', authenticity_score=50,
-       ocr_extracted='{}', anomalies='["ML service unavailable — fallback score applied"]',
+       ocr_extracted='{}', anomalies='["ML service unavailable - fallback score applied"]',
        signal_breakdown='{"ocr":50,"visual":50,"batch":50,"barcode":50,"community":100}' WHERE id=?`,
       [scanId]
     );
-    if (wsClients.has(scanId)) {
-      const fallback = JSON.stringify({ status: 'completed', scanId,
-        data: { id: scanId, authenticity_score: 50, verdict: 'caution',
-          ocr_extracted: {}, anomalies: ['ML service unavailable — fallback score applied'],
-          signal_breakdown: { ocr: 50, visual: 50, batch: 50, barcode: 50, community: 100 }, lat, lng }
-      });
-      wsClients.get(scanId).forEach(s => { try { s.send(fallback); } catch (e) {} });
-    }
+    sendWs(scanId, {
+      status: 'completed', scanId,
+      data: { id: scanId, authenticity_score: 50, verdict: 'caution',
+        ocr_extracted: {}, anomalies: ['ML service unavailable - fallback score applied'],
+        signal_breakdown: { ocr: 50, visual: 50, batch: 50, barcode: 50, community: 100 }, lat, lng }
+    });
   }
 }
 
@@ -298,8 +370,9 @@ fastify.get('/api/v1/alerts/feed', async () => {
 });
 
 fastify.post('/api/v1/reports', { preHandler: authenticate }, async (request, reply) => {
-  const { medicine_id, batch_number, lat, lng } = request.body || {};
-  if (!medicine_id || !batch_number) return reply.status(400).send({ error: 'medicine_id and batch_number required' });
+  const parsed = validate(reportSchema, request.body);
+  if (!parsed.valid) return reply.status(400).send({ error: parsed.error });
+  const { medicine_id, batch_number, lat, lng } = parsed.data;
 
   const existing = await query.get('SELECT * FROM alerts WHERE medicine_id=? AND batch_number=?', [medicine_id, batch_number]);
   if (existing) {
