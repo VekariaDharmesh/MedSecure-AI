@@ -1,7 +1,7 @@
 # MedSecure AI — Real-time Counterfeit Medicine Detector
-### | Team Meridian
+### Verification Framework | Team Meridian
 
-MedSecure AI is a production-grade, real-time counterfeit medicine detection and verification platform. Designed in accordance with Central Drugs Standard Control Organisation (CDSCO) verification standards, this application allows inspectors, pharmacists, and consumers to scan medicine labels using a device camera to verify legitimacy, detect visual printing deviations, decode barcodes, and track report alerts.
+MedSecure AI is a production-grade, real-time counterfeit medicine detection and verification platform. Designed in accordance with national drug regulation standards, this application allows inspectors, pharmacists, and consumers to scan medicine labels using a device camera to verify legitimacy, detect visual printing deviations, decode barcodes, and track report alerts.
 
 ---
 
@@ -39,7 +39,7 @@ graph TD
 
 1. **Real-time Scan Processing Pipeline:** Leverages WebSockets to push granular visual processing stages (e.g., preprocessing, OCR, matching, scoring) back to the user interface dynamically.
 2. **Advanced Image Preprocessing:** Applies image deskewing, bilateral denoising, and contrast enhancement (CLAHE) to maximize OCR recognition accuracy under poor lighting conditions.
-3. **CDSCO Batch & Barcode Verification:** Validates batch numbers against standard manufacturer regular expressions and parses 1D/2D barcodes using `pyzbar`.
+3. **Batch & Barcode Verification:** Validates batch numbers against standard manufacturer regular expressions and parses 1D/2D barcodes using `pyzbar`.
 4. **Color & Layout Profile Checks:** Compares the uploaded medicine color histogram and logo coordinates against reference metadata to detect color profile shifts and packaging mismatches.
 5. **Interactive Alert Map:** Connects location metadata to a glowing, real-time heatmap powered by Leaflet, displaying geographical clusters of flagged counterfeit medicines.
 6. **Pharmacist & Inspector Dashboard:** Provides data visualizations on risk levels, scan history, common packaging anomalies, and district-level risk indicators.
@@ -69,11 +69,11 @@ Stores details of registered inspectors, pharmacists, healthcare workers, and co
 Stores reference standard properties of verified genuine medications.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `id` | TEXT | PRIMARY KEY | Unique medicine code / CDSCO registration ID |
+| `id` | TEXT | PRIMARY KEY | Unique medicine code / registration ID |
 | `name` | TEXT | - | Brand name of the medication |
 | `generic_name` | TEXT | - | Active pharmaceutical ingredient (API) |
 | `manufacturer_name`| TEXT | - | Registered pharmaceutical manufacturing company |
-| `cdsco_license` | TEXT | - | CDSCO Manufacturing license number |
+| `cdsco_license` | TEXT | - | Manufacturing license number |
 | `approved_batch_format` | TEXT | - | Regex string validating correct batch format |
 | `composition` | TEXT | JSON Array | Active ingredient quantities (JSON array) |
 | `expected_colors` | TEXT | JSON Object | Hex color ranges and dominant color ratios |
@@ -190,7 +190,7 @@ npm run dev
 Once the applications are running locally, open `http://localhost:5173` to test the demo packages preset at the top of the interface:
 
 * **Scenario 1: Calpol 650 (Genuine)**
-  * **Expected Result:** High authenticity score (98.4%), CDSCO registration matching, valid batch regex structure. Badge status: **Verified Genuine**.
+  * **Expected Result:** High authenticity score (98.4%), registration matching, valid batch regex structure. Badge status: **Verified Genuine**.
 * **Scenario 2: Crocin 500 (Counterfeit Batch Format)**
   * **Expected Result:** Flags a batch format mismatch regex violation. Badge status: **High Risk Alert**.
 * **Scenario 3: Omez 20 (Counterfeit Package Profile)**
