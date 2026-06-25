@@ -14,7 +14,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_BASE_URL = 'http://localhost:3001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -269,7 +269,8 @@ export default function App() {
     if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
       return url;
     }
-    return `http://localhost:3001${url}`;
+    const base = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+    return `${base}${url}`;
   };
 
   // Fetch scan history from real database
@@ -411,7 +412,15 @@ export default function App() {
       const scanId = uploadResult.scanId;
 
       // Subscribe to real WebSocket for updates
-      const wsUrl = `ws://${window.location.hostname}:3001/ws/scan`;
+      let defaultWsUrl = `ws://${window.location.hostname}:3001/ws/scan`;
+      if (API_BASE_URL.startsWith('https://')) {
+        const baseDomain = API_BASE_URL.replace('https://', '').replace(/\/api\/v1\/?$/, '');
+        defaultWsUrl = `wss://${baseDomain}/ws/scan`;
+      } else if (API_BASE_URL.startsWith('http://')) {
+        const baseDomain = API_BASE_URL.replace('http://', '').replace(/\/api\/v1\/?$/, '');
+        defaultWsUrl = `ws://${baseDomain}/ws/scan`;
+      }
+      const wsUrl = import.meta.env.VITE_WS_URL || defaultWsUrl;
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
